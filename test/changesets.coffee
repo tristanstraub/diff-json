@@ -4,6 +4,7 @@ util = require 'util'
 changesets = require '../src/changesets'
 {op} = changesets
 qc = require 'jsquickcheck'
+assert = require 'assert'
 
 describe 'changesets', ->
   oldObj = newObj = changeset = changesetWithouEmbeddedKey = null
@@ -199,7 +200,7 @@ describe 'changesets', ->
             diff = changesets.diff origin, final
             originalDiff = _.cloneDeep diff
             changesets.revertChanges final, diff
-            #expect(final).to.eql origin
+            expect(final).to.eql origin
 
             # # Diff should not be modified
             expect(diff).to.eql originalDiff
@@ -232,6 +233,10 @@ describe 'changesets', ->
           copies = a: _.cloneDeep(a), b: _.cloneDeep(b)
           diff = changesets.diff copies.a, copies.b
           changesets.applyChanges copies.a, diff
-          expect(copies.a).to.eql b
+          assert.deepEqual copies.a, b
+
+          # If applyChanges works, test revert changes
+          changesets.revertChanges copies.a, diff
+          assert.deepEqual copies.a, a
           cb()
         .run done
