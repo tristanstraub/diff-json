@@ -166,7 +166,7 @@ describe 'changesets', ->
       changesets.revertChanges final, diff
 
 
-      expect(final).to.eql Origin()
+      expect(final).to.eql getOrigin()
 
     describe 'on random objects', ->
       arrayTest = (predicate, cb) ->
