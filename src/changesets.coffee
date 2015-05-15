@@ -216,7 +216,7 @@
 
 
   changeset.revertChanges = (obj, changeset) ->
-    for change in changeset.reverse()
+    for change in _.clone(changeset).reverse()
       if !change.changes
         revertLeafChange obj, change
       else

@@ -1,7 +1,9 @@
+_ = require 'lodash'
 expect = require 'expect.js'
 util = require 'util'
 changesets = require '../src/changesets'
 {op} = changesets
+qc = require 'jsquickcheck'
 
 describe 'changesets', ->
   oldObj = newObj = changeset = changesetWithouEmbeddedKey = null
@@ -153,3 +155,83 @@ describe 'changesets', ->
       oldObj.children.sort (a, b) -> a.name > b.name
       newObj.children.sort (a, b) -> a.name > b.name
       expect(newObj).to.eql oldObj
+
+    it 'should maintain order in arrays after reverse then apply', ->
+      getOrigin = -> {children: [1, 2]}
+      getNext = -> {children: [1, 2, 3, 4]}
+
+      diff = changesets.diff getOrigin(), getNext()
+
+      final = getNext()
+      changesets.revertChanges final, diff
+
+
+      expect(final).to.eql Origin()
+
+    describe 'on random objects', ->
+      arrayTest = (predicate, cb) ->
+        {generators} = qc
+
+        Origin = generators.object(
+          a: generators.array(generators.integer(0, 5), generators.integer())
+          b: generators.array(generators.integer(0, 5), generators.integer())
+        )
+
+        builder = qc.forAll generators.object origin: Origin, final: Origin
+          # Many repetitions required to expose the flaw in now.toISOString() > lineItem.endDate
+          .repetitions(100)
+          .predicate predicate
+          .run cb
+
+      describe 'revertChanges()', ->
+
+        it.only 'should work on random arrays of primitive values', (done) ->
+          arrayTest ({origin, final}, cb) ->
+            diff = changesets.diff origin, final
+            originalDiff = _.cloneDeep diff
+            changesets.revertChanges final, diff
+            expect(final).to.eql origin
+            cb()
+          , done
+
+        it 'should not modify origin diff', (done) ->
+          arrayTest ({origin, final}, cb) ->
+            diff = changesets.diff origin, final
+            originalDiff = _.cloneDeep diff
+            changesets.revertChanges final, diff
+            #expect(final).to.eql origin
+
+            # # Diff should not be modified
+            expect(diff).to.eql originalDiff
+            cb()
+          , done
+
+    it 'should work on random objects', (done) ->
+      {generators} = qc
+
+      generator = (depth) ->
+        if depth <= 0 then return generators.oneOf(generators.string(), generators.integer())
+
+        generators.oneOf(
+          generators.array(generators.integer(0, 4), generator(depth - 1))
+          generators.object(generators.array(generators.integer(1, 2), generators.string()), generator(depth - 1))
+          generators.oneOf(generators.string(), generators.integer())
+        )
+
+      builder = qc.forAll generators.object a: generator(2), b: generator(2)
+
+      isObject = (x) -> x? and typeof x is 'object'
+
+      builder
+        .skip ({a, b}) -> !isObject(a) or !isObject(b)
+        # Many repetitions required to expose the flaw in now.toISOString() > lineItem.endDate
+        .repetitions(100)
+        .predicate ({a, b}, cb) ->
+          a = values: a
+          b = values: b
+          copies = a: _.cloneDeep(a), b: _.cloneDeep(b)
+          diff = changesets.diff copies.a, copies.b
+          changesets.applyChanges copies.a, diff
+          expect(copies.a).to.eql b
+          cb()
+        .run done
