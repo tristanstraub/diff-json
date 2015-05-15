@@ -52,7 +52,7 @@ describe 'changesets', ->
         { type: 'remove', key: '0', value: 'car' }
         { type: 'remove', key: '1', value: 'doll' }
         { type: 'remove', key: '2', value: 'car' }
-      ] 
+      ]
     }
     { type: 'update', key: 'pets', embededKey: '$index', changes: [
         { type: 'remove', key: '0', value: undefined }
@@ -185,7 +185,7 @@ describe 'changesets', ->
 
       describe 'revertChanges()', ->
 
-        it.only 'should work on random arrays of primitive values', (done) ->
+        it 'should work on random arrays of primitive values', (done) ->
           arrayTest ({origin, final}, cb) ->
             diff = changesets.diff origin, final
             originalDiff = _.cloneDeep diff
